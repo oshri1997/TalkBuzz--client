@@ -35,7 +35,7 @@ Profile Management: Customize your profile, update information, and manage priva
 2. Below the post, find the comment section.
 3. Type your comment and click "Submit."
 ## Liking
-1. Simply click the "Like" button below a post to show your appreciation.
+1. Simply click the "Like" button below a post/comment/reply to show your appreciation.
 ## Adding Friends
 
 1. Go to the homepage.
