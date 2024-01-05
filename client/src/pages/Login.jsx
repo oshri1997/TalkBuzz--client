@@ -9,10 +9,12 @@ import { Link } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { BgImage } from "../assets";
 import { Loading } from "../components";
+import { apiRequest } from "../utils";
+import { userLogin } from "../redux/userSlice";
+import { useNavigate } from "react-router-dom";
 const Login = () => {
-  const onSubmit = async (formData) => {};
   const [errMsg, setErrMsg] = useState("");
-  // const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const {
     register,
@@ -22,6 +24,25 @@ const Login = () => {
   } = useForm({
     mode: "onChange",
   });
+  const onSubmit = async (formData) => {
+    try {
+      const res = await apiRequest({
+        url: "/auth/login",
+        method: "POST",
+        data: formData,
+      });
+      if (res?.status === "failed") {
+        setErrMsg(res);
+      } else {
+        setErrMsg(res);
+        const newData = { token: res.token, ...res.user };
+        dispatch(userLogin(newData));
+        navigate("/", { replace: true });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
   return (
     <div className="flex items-center justify-center w-full h-screen p-6 bg-bgColor">
       <div className="flex w-full h-auto py-8 overflow-hidden shadow-xl md:w-2/3 lg:h-4/6 2xl:h-5/6 lg:py-0 bg-primary rounded-xl">

@@ -1,5 +1,5 @@
-import React from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   CustomButton,
   EditProfile,
@@ -10,31 +10,154 @@ import {
   TextInput,
   TopBar,
 } from "../components";
-import { suggest, requests, posts } from "../assets/data";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { NoProfile } from "../assets";
 import { BsFiletypeGif, BsPersonFillAdd } from "react-icons/bs";
 import { BiImages, BiSolidVideo } from "react-icons/bi";
 import { useForm } from "react-hook-form";
+import {
+  apiRequest,
+  deletePost,
+  fetchPosts,
+  getUserInfo,
+  handleFileUpload,
+  likePost,
+  sendFriendRequest,
+} from "../utils";
+import { userLogin } from "../redux/userSlice";
 const Home = () => {
   const { userInfo, edit } = useSelector((state) => state.user);
-  const [frienRequest, setFriendRequest] = useState(requests);
-  const [suggestedFriends, setSuggestedFriends] = useState(suggest);
+  const { posts } = useSelector((state) => state.post);
+  const [frienRequest, setFriendRequest] = useState([]);
+  const [suggestedFriends, setSuggestedFriends] = useState([]);
   const [errMsg, setErrMsg] = useState("");
-  const [file, SetFile] = useState(null);
+  const [file, setFile] = useState(null);
   const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({
     mode: "onChange",
   });
-  const handlePostSubmit = (formData) => {
-    console.log(formData);
+  const handlePostSubmit = async (formData) => {
+    setPosting(true);
+    setErrMsg("");
+    try {
+      console.log(file);
+      const image = file && (await handleFileUpload(file));
+      const newData = image ? { ...formData, image } : { ...formData };
+      const res = await apiRequest({
+        url: "/posts/createpost",
+        method: "POST",
+        token: userInfo?.token,
+        data: newData,
+      });
+
+      if (res?.status === "failed") {
+        setErrMsg(res?.message);
+      } else {
+        reset({
+          description: "",
+        });
+        setFile(null);
+        setErrMsg("");
+        await fetchPosts(userInfo?.token, dispatch);
+      }
+      setPosting(false);
+    } catch (error) {
+      console.log(error);
+    }
   };
+  const fetchPost = async () => {
+    try {
+      await fetchPosts(userInfo?.token, dispatch);
+      setLoading(false);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const handleLikePost = async (url) => {
+    try {
+      await likePost(userInfo?.token, url);
+      await fetchPost();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const handleDeletePost = async (id) => {
+    try {
+      await deletePost(userInfo?.token, id);
+      await fetchPost();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const fetchFriendRequest = async () => {
+    try {
+      const res = await apiRequest({
+        url: "/users/getfriendrequest",
+        method: "GET",
+        token: userInfo?.token,
+      });
+      setFriendRequest(res?.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const fetchSuggestedFriends = async () => {
+    try {
+      const res = await apiRequest({
+        url: "/users/suggetedfriends",
+        method: "GET",
+        token: userInfo?.token,
+      });
+      setSuggestedFriends(res?.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const handleFriendRequest = async (friendId) => {
+    try {
+      await sendFriendRequest(userInfo?.token, friendId);
+      await fetchFriendRequest();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const acceptFriendRequest = async (id, status) => {
+    try {
+      const res = await apiRequest({
+        url: "/users/acceptrequest",
+        method: "POST",
+        token: userInfo?.token,
+        data: { rid: id, status },
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const getUser = async () => {
+    try {
+      const res = await getUserInfo(userInfo?.token);
+      const updatedUser = { token: userInfo?.token, ...res };
+      dispatch(userLogin(updatedUser));
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    getUser();
+    fetchPost();
+    fetchFriendRequest();
+    fetchSuggestedFriends();
+  }, []);
 
   return (
     <>
@@ -50,7 +173,7 @@ const Home = () => {
               onSubmit={handleSubmit(handlePostSubmit)}
               className="px-4 rounded-lg bg-primary"
             >
-              <div className="flex items-center w-full gap-2 py-4 border-b border-[#66666645] rounded-lg">
+              <div className="flex flex-col items-center w-full gap-2 py-4 rounded-lg sm:flex-row">
                 <img
                   src={userInfo?.profileUrl ?? NoProfile}
                   alt="User Profle Image"
@@ -66,6 +189,7 @@ const Home = () => {
                   error={errors.description?.message}
                 />
               </div>
+
               {errMsg?.message && (
                 <span
                   role="alert"
@@ -79,51 +203,54 @@ const Home = () => {
                 </span>
               )}
               <div className="flex items-center justify-between py-4">
-                <label
-                  className="flex items-center gap-1 cursor-pointer text-ascent-2 hover:text-ascent-1"
-                  htmlFor="imgUpload"
-                >
-                  <input
-                    type="file"
-                    onChange={(e) => SetFile(e.target.files[0])}
-                    className="hidden"
-                    id="imgUpload"
-                    accept=".jpg,.jpeg,.png"
-                    data-max-size="5120"
-                  />
-                  <BiImages />
-                  <span>Image</span>
-                </label>
-                <label
+                <div className="flex justify-between w-1/3 gap-2">
+                  <label
+                    className="flex items-center gap-1 cursor-pointer text-ascent-2 hover:text-ascent-1"
+                    htmlFor="imgUpload"
+                  >
+                    <input
+                      type="file"
+                      onChange={(e) => setFile(e.target.files[0])}
+                      className="hidden"
+                      id="imgUpload"
+                      accept=".jpg,.jpeg,.png"
+                      // data-max-size="5120"
+                    />
+                    <BiImages />
+                    <span>Image</span>
+                  </label>
+
+                  {/* <label
                   className="flex items-center gap-1 cursor-pointer text-ascent-2 hover:text-ascent-1"
                   htmlFor="videoUpload"
                 >
                   <input
                     type="file"
-                    onChange={(e) => SetFile(e.target.files[0])}
+                    onChange={(e) => setFile(e.target.files[0])}
                     className="hidden"
                     id="videoUpload"
                     accept=".mp4,.wav"
-                    data-max-size="5120"
+                    // data-max-size="5120"
                   />
                   <BiSolidVideo />
                   <span>Video</span>
-                </label>
-                <label
-                  className="flex items-center gap-1 cursor-pointer text-ascent-2 hover:text-ascent-1"
-                  htmlFor="vgifUpload"
-                >
-                  <input
-                    type="file"
-                    onChange={(e) => SetFile(e.target.files[0])}
-                    className="hidden"
-                    id="vgifUpload"
-                    accept=".gif"
-                    data-max-size="5120"
-                  />
-                  <BsFiletypeGif />
-                  <span>Gif</span>
-                </label>
+                </label> */}
+                  <label
+                    className="flex items-center gap-1 cursor-pointer text-ascent-2 hover:text-ascent-1"
+                    htmlFor="vgifUpload"
+                  >
+                    <input
+                      type="file"
+                      onChange={(e) => setFile(e.target.files[0])}
+                      className="hidden"
+                      id="vgifUpload"
+                      accept=".gif"
+                      data-max-size="5120"
+                    />
+                    <BsFiletypeGif />
+                    <span>Gif</span>
+                  </label>
+                </div>
                 {posting ? (
                   <Loading />
                 ) : (
@@ -134,6 +261,13 @@ const Home = () => {
                   />
                 )}
               </div>
+              {file && (
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt="post"
+                  className="object-cover w-2/3 h-auto pb-1 mx-auto "
+                />
+              )}
             </form>
             {loading ? (
               <Loading />
@@ -143,8 +277,8 @@ const Home = () => {
                   key={post._id}
                   post={post}
                   userInfo={userInfo}
-                  deletePost={() => {}}
-                  likePost={() => {}}
+                  deletePost={handleDeletePost}
+                  likePost={handleLikePost}
                 />
               ))
             ) : (
@@ -184,10 +318,12 @@ const Home = () => {
                     <div className="flex gap-1.5">
                       <CustomButton
                         title="Accept"
+                        onClick={() => acceptFriendRequest(_id, "Accepted")}
                         containerStyles="bg-[#0444a4] text-xs text-white px-2 py-1 rounded-full"
                       />
                       <CustomButton
                         title="Deny"
+                        onClick={() => acceptFriendRequest(_id, "Denied")}
                         containerStyles="border border-[#666] text-xs text-ascent-1 px-2 py-1 rounded-full"
                       />
                     </div>
@@ -224,7 +360,9 @@ const Home = () => {
 
                     <button
                       className="bg-[#0444a430] text-sm text-white p-1 rounded"
-                      onClick={() => {}}
+                      onClick={() => {
+                        handleFriendRequest(suggest?._id);
+                      }}
                     >
                       <BsPersonFillAdd size={20} className="text-[#0f52b6]" />
                     </button>

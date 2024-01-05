@@ -10,7 +10,7 @@ const FriendsCard = ({ friends }) => {
         <span>{friends?.length}</span>
       </div>
       <div className="flex flex-col w-full gap-4 pt-4">
-        {friends.map((friend) => (
+        {friends?.map((friend) => (
           <Link
             key={friend?._id}
             to={`/profile/${friend?._id}`}

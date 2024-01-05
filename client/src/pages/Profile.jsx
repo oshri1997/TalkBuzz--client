@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import {
@@ -9,14 +9,38 @@ import {
   ProfileCard,
   TopBar,
 } from "../components";
-import { posts } from "../assets/data";
+import { deletePost, fetchPosts, getUserInfo, likePost } from "../utils";
+
 const Profile = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const { userInfo, edit } = useSelector((state) => state.user);
   const [userData, setUserData] = useState(null);
-  // const { posts } = useSelector((state) => state.post);
+  const { posts } = useSelector((state) => state.post);
   const [loading, setLoading] = useState(false);
+
+  const getUser = async () => {
+    const res = await getUserInfo(userInfo?.token, id);
+    setUserData(res);
+  };
+  const getPosts = async () => {
+    await fetchPosts(userInfo?.token, dispatch, `/posts/getuserpost/${id}`);
+    setLoading(false);
+  };
+
+  const handleDelete = async (postId) => {
+    await deletePost(userInfo?.token, postId);
+    await getPosts();
+  };
+  const handleLikePost = async (url) => {
+    await likePost(userInfo?.token, url);
+    await getPosts();
+  };
+  useEffect(() => {
+    setLoading(true);
+    getUser();
+    getPosts();
+  }, [id]);
   return (
     <>
       <div className="w-full h-screen px-0 pb-20 overflow-hidden home lg:px-10 2xl:px-40 bg-bgColor lg:rounded-lg">
@@ -39,8 +63,8 @@ const Profile = () => {
                   post={post}
                   key={post?._id}
                   userInfo={userInfo}
-                  deletePost={() => {}}
-                  likePost={() => {}}
+                  deletePost={handleDelete}
+                  likePost={handleLikePost}
                 />
               ))
             ) : (

@@ -9,6 +9,7 @@ import { BsMoon, BsSunFill } from "react-icons/bs";
 import { IoMdNotificationsOutline } from "react-icons/io";
 import { setTheme } from "../redux/themeSlice";
 import { userLogout } from "../redux/userSlice";
+import { fetchPosts } from "../utils";
 
 const TopBar = () => {
   const { theme } = useSelector((state) => state.theme);
@@ -21,8 +22,12 @@ const TopBar = () => {
   } = useForm({
     mode: "onChange",
   });
-  const handleSearch = (formData) => {
-    console.log(formData);
+  const handleSearch = async (formData) => {
+    try {
+      await fetchPosts(userInfo.token, dispatch, "", formData);
+    } catch (error) {
+      console.log(error);
+    }
   };
   const handleTheme = () => {
     dispatch(setTheme(theme === "dark" ? "light" : "dark"));
@@ -37,6 +42,8 @@ const TopBar = () => {
       </Link>
       <form className="items-center justify-center hidden px-2 md:flex">
         <TextInput
+          type="text"
+          name="search"
           placeholder="Search"
           styles="w-[18rem] lg:w-[28rem] 2xl:w-[38rem] outline-none rounded-l-full py-3"
           register={register("search")}

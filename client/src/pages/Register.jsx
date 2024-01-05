@@ -5,16 +5,14 @@ import { ImConnection } from "react-icons/im";
 import { AiOutlineInteraction } from "react-icons/ai";
 import { CustomButton, TextInput } from "../components";
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { BgImage } from "../assets";
 import { Loading } from "../components";
+import { apiRequest } from "../utils";
 const Register = () => {
-  const onSubmit = async (formData) => {};
-
   const [errMsg, setErrMsg] = useState("");
-  // const [isSubmitting, setIsSubmitting] = useState(false);
-  const dispatch = useDispatch();
+  const navigate = useNavigate({});
   const {
     register,
     handleSubmit,
@@ -24,6 +22,26 @@ const Register = () => {
   } = useForm({
     mode: "onSubmit",
   });
+  const onSubmit = async (formData) => {
+    try {
+      const res = await apiRequest({
+        url: "/auth/register",
+        method: "POST",
+        data: formData,
+      });
+      if (res?.status === "failed") {
+        setErrMsg(res);
+      } else {
+        setErrMsg(res);
+        setTimeout(() => {
+          navigate("/login", { replace: true });
+        }, 5000);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center w-full h-screen p-6 bg-bgColor">
       <div className="flex flex-row-reverse w-full h-auto py-8 overflow-hidden shadow-xl md:w-2/3 lg:h-4/6 2xl:h-5/6 lg:py-0 bg-primary rounded-xl">

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { set, useForm } from "react-hook-form";
 import { MdClose } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import TextInput from "./TextInput";
 import Loading from "./Loading";
 import CustomButton from "./CustomButton";
-import { updateProfile } from "../redux/userSlice";
+import { updateProfile, userLogin } from "../redux/userSlice";
+import { apiRequest, handleFileUpload } from "../utils";
 
 const EditProfile = () => {
   const { userInfo } = useSelector((state) => state.user);
@@ -21,7 +22,38 @@ const EditProfile = () => {
     defaultValues: { ...userInfo },
   });
   const dispatch = useDispatch();
-  const onSubmit = async (formData) => {};
+  const onSubmit = async (formData) => {
+    setErrMsg("");
+    try {
+      const image = picture && (await handleFileUpload(picture));
+      const { firstName, lastName, profession, location } = formData;
+      const res = await apiRequest({
+        url: "/users/updateprofile",
+        data: {
+          firstName,
+          lastName,
+          profession,
+          location,
+          profileUrl: image ? image : userInfo.profileUrl,
+        },
+        method: "PUT",
+        token: userInfo?.token,
+      });
+      console.log(res);
+      if (res?.status === "failed") {
+        setErrMsg(res?.message);
+      } else {
+        setErrMsg(res);
+        const updatedUser = { token: res.token, ...res.user };
+        dispatch(userLogin(updatedUser));
+        setTimeout(() => {
+          dispatch(updateProfile(false));
+        }, 3000);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
   const handleClose = () => {
     dispatch(updateProfile(false));
   };
@@ -81,8 +113,8 @@ const EditProfile = () => {
 
             <TextInput
               name="profession"
-              label="Profession"
-              placeholder="Profession"
+              label="profession"
+              placeholder="profession"
               type="text"
               styles="w-full"
               register={register("profession", {
