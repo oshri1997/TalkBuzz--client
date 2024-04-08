@@ -43,7 +43,7 @@ const Register = () => {
   };
 
   return (
-    <div className="flex items-center justify-center w-full h-screen p-6 bg-bgColor">
+    <div className="flex relative items-center justify-center w-full h-screen p-6 bg-bgColor">
       <div className="flex flex-row-reverse w-full h-auto py-8 overflow-hidden shadow-xl md:w-2/3 lg:h-4/6 2xl:h-5/6 lg:py-0 bg-primary rounded-xl">
         <div className="flex flex-col justify-center w-full h-full p-10 lg:w-1/2 2xl:px-20">
           <div className="flex items-center w-full gap-2 mb-6">
